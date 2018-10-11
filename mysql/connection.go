@@ -28,11 +28,6 @@ func (sc *ShardConn) QueryContext(ctx context.Context, query string, args []driv
 	return &shardRows{rows}, err
 }
 
-func (sc *ShardConn) Prepare(query string) (driver.Stmt, error) {
-	stmt := &shardStmt{}
-	return stmt, nil
-}
-
 func (sc *ShardConn) Close() error {
 	for _, back := range sc.cos {
 		back.Close()
@@ -66,4 +61,9 @@ func (sc *ShardConn) Connect(dsn string) error {
 
 	sc.cos[0] = conn
 	return nil
+}
+
+func (sc *ShardConn) Prepare(query string) (driver.Stmt, error) {
+	stmt := &shardStmt{}
+	return stmt, nil
 }
