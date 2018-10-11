@@ -6,11 +6,12 @@
 package mysql
 
 import (
+	"context"
 	"database/sql/driver"
+	"errors"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/lemonwx/log"
-
 	d "github.com/xelabs/go-mysqlstack/driver"
 )
 
@@ -18,26 +19,35 @@ type ShardConn struct {
 	cos map[int]d.Conn
 }
 
-func (co *ShardConn) Prepare(query string) (driver.Stmt, error) {
+func (sc *ShardConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if len(args) != 0 {
+		return nil, errors.New("unsupported prepare stmt")
+	}
+
+	rows, err := sc.cos[0].Query(query)
+	return &shardRows{rows}, err
+}
+
+func (sc *ShardConn) Prepare(query string) (driver.Stmt, error) {
 	stmt := &shardStmt{}
 	return stmt, nil
 }
 
-func (co *ShardConn) Close() error {
-	for _, back := range co.cos {
+func (sc *ShardConn) Close() error {
+	for _, back := range sc.cos {
 		back.Close()
 	}
 	return nil
 }
 
-func (co *ShardConn) Begin() (driver.Tx, error) {
+func (sc *ShardConn) Begin() (driver.Tx, error) {
 	tx := &shardTx{}
 	return tx, nil
 }
 
-func (co *ShardConn) Query(query string, args []driver.Value) (driver.Rows, error) {
+func (sc *ShardConn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	log.Debug(query, args)
-	rows, err := co.cos[0].Query(query)
+	rows, err := sc.cos[0].Query(query)
 	return &shardRows{rows}, err
 }
 
