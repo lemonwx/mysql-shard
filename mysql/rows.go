@@ -10,6 +10,8 @@ import (
 
 	"fmt"
 
+	"io"
+
 	d "github.com/xelabs/go-mysqlstack/driver"
 )
 
@@ -27,7 +29,9 @@ func (sr *shardRows) Columns() []string {
 }
 
 func (sr *shardRows) Next(dest []driver.Value) error {
-	sr.Rows.Next()
+	if !sr.Rows.Next() {
+		return io.EOF
+	}
 	vals, err := sr.RowValues()
 	if err != nil {
 		return err
