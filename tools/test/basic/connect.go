@@ -8,6 +8,9 @@ package basic
 import (
 	"database/sql"
 
+	"fmt"
+	"time"
+
 	"github.com/lemonwx/log"
 )
 
@@ -40,4 +43,35 @@ func TestQuery(url, driverName string) {
 		}
 		log.Debugf("scan ret => v: %d, id: %d, name: %s", v, id, name)
 	}
+	db.Close()
+}
+
+func TestExec(url, driverName string) {
+	db, err := sql.Open(driverName, url)
+	if err != nil {
+		log.Errorf("run test exec, OpenDb failed: %v", err)
+		return
+	}
+
+	ret, err := db.Exec(fmt.Sprintf("update tb set name = '%v'", time.Now().Second()))
+	if err != nil {
+		log.Errorf("run exec failed: %v", err)
+		return
+	}
+	aft, err := ret.RowsAffected()
+	if err != nil {
+		log.Errorf("get rows aft failed: %v", err)
+		return
+	}
+
+	lst, err := ret.LastInsertId()
+	if err != nil {
+		log.Errorf("get last ist id failed: %v", err)
+		return
+	}
+
+	log.Debug(aft)
+	log.Debug(lst)
+
+	db.Close()
 }

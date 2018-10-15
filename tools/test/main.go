@@ -24,5 +24,6 @@ func main() {
 		basic.TestConnect(url, driverName)
 
 		basic.TestQuery(url, driverName)
+		basic.TestExec(url, driverName)
 	}
 }
