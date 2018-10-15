@@ -6,9 +6,9 @@
 package mysql
 
 import (
-	"context"
 	"database/sql/driver"
-	"errors"
+
+	"fmt"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/lemonwx/log"
@@ -17,15 +17,6 @@ import (
 
 type ShardConn struct {
 	cos map[int]d.Conn
-}
-
-func (sc *ShardConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	if len(args) != 0 {
-		return nil, errors.New("unsupported prepare stmt")
-	}
-
-	rows, err := sc.cos[0].Query(query)
-	return &shardRows{rows}, err
 }
 
 func (sc *ShardConn) Close() error {
@@ -44,6 +35,18 @@ func (sc *ShardConn) Query(query string, args []driver.Value) (driver.Rows, erro
 	log.Debug(query, args)
 	rows, err := sc.cos[0].Query(query)
 	return &shardRows{rows}, err
+}
+
+func (sc *ShardConn) Exec(query string, args []driver.Value) (driver.Result, error) {
+	if len(args) != 0 {
+		return nil, fmt.Errorf("unsupported prepare stmt")
+	}
+
+	rows, err := sc.cos[0].Query(query)
+	if err != nil {
+		return nil, err
+	}
+	return &shardResult{rows}, nil
 }
 
 func (sc *ShardConn) Connect(dsn string) error {

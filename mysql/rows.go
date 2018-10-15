@@ -42,3 +42,15 @@ func (sr *shardRows) Next(dest []driver.Value) error {
 
 	return nil
 }
+
+type shardResult struct {
+	d.Rows
+}
+
+func (sr *shardResult) LastInsertId() (int64, error) {
+	return int64(sr.Rows.LastInsertID()), nil
+}
+
+func (sr *shardResult) RowsAffected() (int64, error) {
+	return int64(sr.Rows.RowsAffected()), nil
+}
