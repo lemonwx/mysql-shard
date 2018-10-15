@@ -6,9 +6,13 @@
 package mysql
 
 type shardTx struct {
+	sc *ShardConn
 }
 
 func (st *shardTx) Commit() error {
+	if err := st.sc.cos[0].Exec("commit /*by lim*/"); err != nil {
+		return err
+	}
 	return nil
 }
 

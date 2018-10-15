@@ -20,10 +20,13 @@ func main() {
 	log.NewDefaultLogger(os.Stdout)
 	log.SetLevel(log.DEBUG)
 
-	for _, driverName := range []string{"mysql-shard", "mysql"} {
-		basic.TestConnect(url, driverName)
-
-		basic.TestQuery(url, driverName)
-		basic.TestExec(url, driverName)
+	for _, driverName := range []string{
+		"mysql-shard",
+		"mysql",
+	} {
+		// basic.TestConnect(url, driverName)
+		// basic.TestQuery(url, driverName)
+		// basic.TestExec(url, driverName)
+		basic.TestTx(url, driverName)
 	}
 }

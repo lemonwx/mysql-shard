@@ -27,7 +27,10 @@ func (sc *ShardConn) Close() error {
 }
 
 func (sc *ShardConn) Begin() (driver.Tx, error) {
-	tx := &shardTx{}
+	if err := sc.cos[0].Exec("start transaction/*by lim*/"); err != nil {
+		return nil, err
+	}
+	tx := &shardTx{sc}
 	return tx, nil
 }
 
