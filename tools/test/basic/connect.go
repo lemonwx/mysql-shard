@@ -9,9 +9,16 @@ import (
 	"database/sql"
 
 	"fmt"
+
 	"time"
 
 	"github.com/lemonwx/log"
+)
+
+var db *sql.DB
+
+const (
+	Count = 10
 )
 
 func TestConnect(url, driverName string) {
@@ -46,6 +53,70 @@ func TestQuery(url, driverName string) {
 	db.Close()
 }
 
+func TestDel(db *sql.DB) error {
+	ret, err := db.Exec("delete from tb")
+	if err != nil {
+		log.Errorf("run del failed: %v", err)
+		return err
+	}
+
+	aft, err := ret.RowsAffected()
+	if err != nil {
+		log.Errorf("get rows aft failed: %v", err)
+		return err
+	}
+
+	log.Debug(aft)
+	return nil
+}
+
+func TestIst(db *sql.DB) error {
+	for idx := 0; idx < Count; idx += 1 {
+		ret, err := db.Exec(fmt.Sprintf("insert into tb(id, name) values (%d, 'im idx:%d')", idx, idx))
+		if err != nil {
+			log.Errorf("run exec ist failed: %v", err)
+			return err
+		}
+
+		aft, err := ret.RowsAffected()
+		if err != nil {
+			log.Errorf("get rows aft failed: %v", err)
+			return err
+		}
+
+		if aft != 1 {
+			err = fmt.Errorf("run ist aft not 1 but %d", aft)
+			log.Error(err)
+			return err
+		}
+	}
+	return nil
+}
+
+func TestUpd(db *sql.DB) error {
+	for idx := 0; idx < Count; idx += 1 {
+		ret, err := db.Exec(fmt.Sprintf("update tb set name = %v where id = %d", time.Now().Second(), idx))
+		if err != nil {
+			log.Errorf("run update failed: %v", err)
+			return err
+		}
+
+		aft, err := ret.RowsAffected()
+		if err != nil {
+			log.Errorf("get rows aft failed: %v", err)
+			return err
+		}
+
+		if aft != 1 {
+			err = fmt.Errorf("getted rows aft not 1 but %d", aft)
+			log.Error(err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func TestExec(url, driverName string) {
 	db, err := sql.Open(driverName, url)
 	if err != nil {
@@ -53,25 +124,21 @@ func TestExec(url, driverName string) {
 		return
 	}
 
-	ret, err := db.Exec(fmt.Sprintf("update tb set name = '%v'", time.Now().Second()))
-	if err != nil {
-		log.Errorf("run exec failed: %v", err)
-		return
-	}
-	aft, err := ret.RowsAffected()
-	if err != nil {
-		log.Errorf("get rows aft failed: %v", err)
+	if err := TestDel(db); err != nil {
 		return
 	}
 
-	lst, err := ret.LastInsertId()
-	if err != nil {
-		log.Errorf("get last ist id failed: %v", err)
+	if err := TestIst(db); err != nil {
 		return
 	}
 
-	log.Debug(aft)
-	log.Debug(lst)
+	if err := TestUpd(db); err != nil {
+		return
+	}
+
+	if err := TestDel(db); err != nil {
+		return
+	}
 
 	db.Close()
 }
