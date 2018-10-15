@@ -19,7 +19,6 @@ func (sd ShardDriver) Open(dsn string) (driver.Conn, error) {
 	if err := sc.Connect(dsn); err != nil {
 		return nil, err
 	}
-
 	return sc, nil
 }
 

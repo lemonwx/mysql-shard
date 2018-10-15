@@ -10,13 +10,63 @@ import (
 
 	"fmt"
 
+	"strconv"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/lemonwx/log"
 	d "github.com/xelabs/go-mysqlstack/driver"
 )
 
+const (
+	Shard = "shard"
+	Host  = 0
+	Port  = 1
+)
+
+type shard struct {
+	size  uint
+	cfg   *mysql.Config
+	addrs []string
+}
+
+func parseShard(dsn string) (s *shard, err error) {
+	var shardEncode string
+	var shardSize uint64
+	var ok bool
+
+	s.cfg, err = mysql.ParseDSN(dsn)
+	if err != nil {
+		return
+	}
+
+	shardEncode, ok = s.cfg.Params[Shard]
+	if !ok {
+		err = fmt.Errorf("cant not find shard size")
+	}
+
+	shardSize, err = strconv.ParseUint(shardEncode, 10, 64)
+	if err != nil {
+		err = fmt.Errorf("parse shard size failed: %v", err)
+		return
+	}
+
+	for idx := uint64(0); idx < shardSize; idx += 1 {
+		key := fmt.Sprintf("shard%d", idx)
+		addr, ok := s.cfg.Params[key]
+		if !ok {
+			err = fmt.Errorf("shard size: %d, but can't get key: %s", shardSize, key)
+			return
+		}
+		s.addrs = append(s.addrs, addr)
+	}
+	return
+}
+
 type ShardConn struct {
-	cos map[int]d.Conn
+	cos     map[int]d.Conn
+	adminCo d.Conn
+
+	shard *shard
 }
 
 func (sc *ShardConn) Close() error {
@@ -54,18 +104,21 @@ func (sc *ShardConn) Exec(query string, args []driver.Value) (driver.Result, err
 
 func (sc *ShardConn) Connect(dsn string) error {
 	var err error
-	var cfg *mysql.Config
-	var conn d.Conn
+	if sc.shard == nil {
+		if sc.shard, err = parseShard(dsn); err != nil {
+			return err
+		}
+	}
 
-	if cfg, err = mysql.ParseDSN(dsn); err != nil {
+	if sc.adminCo, err = d.NewConn(
+		sc.shard.cfg.User,
+		sc.shard.cfg.Passwd,
+		sc.shard.cfg.Passwd,
+		sc.shard.cfg.DBName,
+		"utf8"); err != nil {
 		return err
 	}
 
-	if conn, err = d.NewConn(cfg.User, cfg.Passwd, cfg.Addr, cfg.DBName, "utf8"); err != nil {
-		return err
-	}
-
-	sc.cos[0] = conn
 	return nil
 }
 
